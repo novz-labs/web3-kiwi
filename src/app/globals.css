@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
   --background: #0a0a0a;
@@ -6,15 +9,48 @@
   --primary: #ABC44E;
   --primary-dim: #8ba33e;
   --muted: #666666;
+  --muted-foreground: #888888;
   --border: #333333;
+  --radius: 0.5rem;
+  --card: #1a1a1a;
+  --card-foreground: #e0e0e0;
+  --popover: #1a1a1a;
+  --popover-foreground: #e0e0e0;
+  --primary-foreground: #0a0a0a;
+  --secondary: #252525;
+  --secondary-foreground: #e0e0e0;
+  --accent: #252525;
+  --accent-foreground: #e0e0e0;
+  --destructive: #ef4444;
+  --input: #333333;
+  --ring: #ABC44E;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 * {
@@ -54,6 +90,15 @@ body {
 
 .cursor-blink {
   animation: blink 1s infinite;
+}
+
+@keyframes terminal-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.animate-terminal-blink {
+  animation: terminal-blink 1s infinite;
 }
 
 /* Typing animation */
@@ -108,4 +153,36 @@ a {
 
 a:hover {
   color: var(--primary);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Terminal scrollbar styling */
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(171, 196, 78, 0.3);
+  border-radius: 3px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(171, 196, 78, 0.5);
+}
+
+.terminal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(171, 196, 78, 0.3) transparent;
 }
