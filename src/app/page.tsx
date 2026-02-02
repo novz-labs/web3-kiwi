@@ -34,7 +34,7 @@ export default function Home() {
       "",
       ...t.terminal.welcome.split("\n"),
       "",
-      'Type "commands" to see web3kiwi commands, or "help" for built-in commands.',
+      "'/'를 입력하면 명령어 목록을 볼 수 있습니다.",
     ];
     return messages;
   }, [t.terminal.welcome]);
@@ -229,22 +229,22 @@ export default function Home() {
       </header>
 
       {/* Terminal */}
-      <main className="flex-1 overflow-hidden p-4">
+      <main className="flex-1 flex flex-col overflow-hidden">
         <Terminal
           prompt=">"
           welcomeMessage={welcomeMessage}
           commands={commands}
           variant="minimal"
-          className="h-full"
+          className="flex-1"
         />
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border p-4">
+      <footer className="border-t border-border px-4 py-2">
         <div className="text-xs text-muted flex justify-between">
           <div className="flex gap-4">
             <span>{t.terminal.commands}</span>
-            <span>Type &quot;commands&quot; for web3kiwi commands</span>
+            <span>&apos;/&apos;를 입력하여 명령어 선택</span>
           </div>
           <div className="flex items-center gap-2">
             <span>{t.terminal.language}</span>

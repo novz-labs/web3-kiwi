@@ -326,6 +326,8 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
     const [historyIndex, setHistoryIndex] = useState(-1)
     const [cursorPosition, setCursorPosition] = useState(0)
     const [userScrolledUp, setUserScrolledUp] = useState(false)
+    const [showCommandPalette, setShowCommandPalette] = useState(false)
+    const [selectedSuggestion, setSelectedSuggestion] = useState(0)
 
     const inputRef = useRef<HTMLInputElement>(null)
     const terminalRef = useRef<HTMLDivElement>(null)
@@ -415,6 +417,24 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
 
     const builtInCommands = createBuiltInCommands(addLine, clearLines, updateLastLine, commandHistory, opentuiContext)
     const allCommands = [...builtInCommands, ...Object.values(commands)]
+
+    // Get filtered suggestions based on current input
+    const getFilteredSuggestions = useCallback(() => {
+      const input = currentInput.startsWith("/") ? currentInput.slice(1) : currentInput
+      if (!input && currentInput === "/") {
+        // Show all custom commands when just "/" is typed
+        return Object.values(commands).map(cmd => ({
+          name: cmd.name,
+          description: cmd.description
+        }))
+      }
+      return allCommands
+        .filter(cmd => cmd.name.toLowerCase().startsWith(input.toLowerCase()))
+        .map(cmd => ({
+          name: cmd.name,
+          description: cmd.description
+        }))
+    }, [currentInput, allCommands, commands])
 
     const processCommand = useCallback(
       async (input: string) => {
@@ -510,9 +530,41 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
         }
       }, 0)
 
+      // Handle command palette navigation
+      if (showCommandPalette) {
+        const suggestions = getFilteredSuggestions()
+        if (e.key === "ArrowUp") {
+          e.preventDefault()
+          setSelectedSuggestion(prev => Math.max(0, prev - 1))
+          return
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault()
+          setSelectedSuggestion(prev => Math.min(suggestions.length - 1, prev + 1))
+          return
+        } else if (e.key === "Enter" && suggestions.length > 0) {
+          e.preventDefault()
+          const selected = suggestions[selectedSuggestion]
+          if (selected) {
+            setCurrentInput(selected.name)
+            setShowCommandPalette(false)
+            setSelectedSuggestion(0)
+            // Execute the command immediately
+            setTimeout(() => handleCommand(selected.name), 0)
+          }
+          return
+        } else if (e.key === "Escape") {
+          e.preventDefault()
+          setShowCommandPalette(false)
+          setSelectedSuggestion(0)
+          setCurrentInput("")
+          return
+        }
+      }
+
       if (e.key === "Enter") {
         e.preventDefault()
-        handleCommand(currentInput)
+        setShowCommandPalette(false)
+        handleCommand(currentInput.startsWith("/") ? currentInput.slice(1) : currentInput)
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
         if (commandHistory.length > 0) {
@@ -683,7 +735,7 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
         case "compact":
           return "h-64"
         case "minimal":
-          return "h-48"
+          return "flex-1 min-h-0"
         default:
           return "h-96"
       }
@@ -882,7 +934,7 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
         <div
           ref={ref}
           className={cn(
-            "bg-background text-primary font-mono rounded-lg border border-border overflow-hidden",
+            "bg-background text-primary font-mono rounded-lg border border-border overflow-hidden flex flex-col",
             getVariantStyles(),
             className,
           )}
@@ -958,6 +1010,38 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
 
             {renderUIComponent()}
 
+            {/* Command Palette */}
+            {showCommandPalette && (
+              <div className="border border-primary/30 rounded bg-card mb-2 max-h-64 overflow-y-auto">
+                <div className="text-xs text-muted-foreground px-3 py-2 border-b border-primary/20">
+                  ↑↓ 이동 · ↵ 선택 · ESC 취소
+                </div>
+                {getFilteredSuggestions().map((cmd, index) => (
+                  <div
+                    key={cmd.name}
+                    className={cn(
+                      "px-3 py-2 cursor-pointer flex justify-between items-center",
+                      index === selectedSuggestion
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-secondary"
+                    )}
+                    onClick={() => {
+                      setCurrentInput(cmd.name)
+                      setShowCommandPalette(false)
+                      setSelectedSuggestion(0)
+                      setTimeout(() => handleCommand(cmd.name), 0)
+                    }}
+                  >
+                    <span className="font-semibold">/{cmd.name}</span>
+                    <span className={cn(
+                      "text-sm",
+                      index === selectedSuggestion ? "text-primary-foreground/80" : "text-muted-foreground"
+                    )}>{cmd.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex items-center text-foreground mt-1 relative">
               <span className="text-primary mr-2 font-bold shrink-0">{prompt}</span>
               <div className="flex-1 relative">
@@ -966,8 +1050,17 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
                   type="text"
                   value={currentInput}
                   onChange={(e) => {
-                    setCurrentInput(e.target.value)
+                    const value = e.target.value
+                    setCurrentInput(value)
                     setCursorPosition(e.target.selectionStart || 0)
+
+                    // Show command palette when "/" is typed
+                    if (value === "/" || value.startsWith("/")) {
+                      setShowCommandPalette(true)
+                      setSelectedSuggestion(0)
+                    } else {
+                      setShowCommandPalette(false)
+                    }
                   }}
                   onKeyDown={handleKeyDown}
                   onSelect={() => {
