@@ -213,7 +213,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-mono flex flex-col">
+    <div className="h-screen bg-background text-foreground font-mono flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-border px-4 py-2 flex justify-between items-center text-sm">
         <div className="flex items-center gap-4">
@@ -229,7 +229,7 @@ export default function Home() {
       </header>
 
       {/* Terminal */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0">
         <Terminal
           prompt=">"
           welcomeMessage={welcomeMessage}

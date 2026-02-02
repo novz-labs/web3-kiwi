@@ -328,6 +328,7 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
     const [userScrolledUp, setUserScrolledUp] = useState(false)
     const [showCommandPalette, setShowCommandPalette] = useState(false)
     const [selectedSuggestion, setSelectedSuggestion] = useState(0)
+    const [isTypingAnimation, setIsTypingAnimation] = useState(false)
 
     const inputRef = useRef<HTMLInputElement>(null)
     const terminalRef = useRef<HTMLDivElement>(null)
@@ -418,6 +419,24 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
     const builtInCommands = createBuiltInCommands(addLine, clearLines, updateLastLine, commandHistory, opentuiContext)
     const allCommands = [...builtInCommands, ...Object.values(commands)]
 
+    // Streaming typing effect function
+    const typeCommandWithAnimation = useCallback(async (commandName: string, onComplete: () => void) => {
+      setIsTypingAnimation(true)
+      setCurrentInput("")
+
+      const chars = commandName.split("")
+      for (let i = 0; i < chars.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, 30 + Math.random() * 20))
+        setCurrentInput(prev => prev + chars[i])
+        setCursorPosition(i + 1)
+      }
+
+      // Small pause before executing
+      await new Promise(resolve => setTimeout(resolve, 100))
+      setIsTypingAnimation(false)
+      onComplete()
+    }, [])
+
     // Get filtered suggestions based on current input
     const getFilteredSuggestions = useCallback(() => {
       const input = currentInput.startsWith("/") ? currentInput.slice(1) : currentInput
@@ -467,6 +486,9 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
     const handleCommand = async (command: string) => {
       if (!command.trim()) return
 
+      // Reset scroll state to ensure we follow new content
+      setUserScrolledUp(false)
+
       setCommandHistory((prev) => [...prev, command])
       setHistoryIndex(-1)
 
@@ -482,7 +504,9 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
         await processCommand(command)
       } finally {
         setIsProcessing(false)
+        // Force scroll to bottom after command completion
         setTimeout(() => {
+          scrollToBottom(true)
           inputRef.current?.focus()
         }, 0)
       }
@@ -545,11 +569,12 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
           e.preventDefault()
           const selected = suggestions[selectedSuggestion]
           if (selected) {
-            setCurrentInput(selected.name)
             setShowCommandPalette(false)
             setSelectedSuggestion(0)
-            // Execute the command immediately
-            setTimeout(() => handleCommand(selected.name), 0)
+            // Execute with streaming typing animation
+            typeCommandWithAnimation(selected.name, () => {
+              handleCommand(selected.name)
+            })
           }
           return
         } else if (e.key === "Escape") {
@@ -934,7 +959,7 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
         <div
           ref={ref}
           className={cn(
-            "bg-background text-primary font-mono rounded-lg border border-border overflow-hidden flex flex-col",
+            "bg-background text-primary font-mono rounded-lg border border-border overflow-hidden flex flex-col min-h-0",
             getVariantStyles(),
             className,
           )}
@@ -1026,10 +1051,11 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
                         : "hover:bg-secondary"
                     )}
                     onClick={() => {
-                      setCurrentInput(cmd.name)
                       setShowCommandPalette(false)
                       setSelectedSuggestion(0)
-                      setTimeout(() => handleCommand(cmd.name), 0)
+                      typeCommandWithAnimation(cmd.name, () => {
+                        handleCommand(cmd.name)
+                      })
                     }}
                   >
                     <span className="font-semibold">/{cmd.name}</span>
@@ -1073,7 +1099,7 @@ const Terminal = React.forwardRef<HTMLDivElement, TerminalProps>(
                       setCursorPosition(inputRef.current.selectionStart || 0)
                     }
                   }}
-                  disabled={isProcessing}
+                  disabled={isProcessing || isTypingAnimation}
                   className="w-full bg-transparent border-none outline-none text-foreground font-mono caret-transparent"
                   autoComplete="off"
                   spellCheck={false}
